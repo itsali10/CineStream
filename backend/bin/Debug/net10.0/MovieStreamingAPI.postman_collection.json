@@ -1,0 +1,201 @@
+{
+  "info": {
+    "name": "MovieStreamingAPI",
+    "_postman_id": "5cbd3e8a-c5ff-4f25-b2b8-4f0905d97f4a",
+    "description": "Postman collection for MovieStreamingAPI auth and CRUD endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5202" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "1" },
+    { "key": "movieId", "value": "1" },
+    { "key": "directorId", "value": "1" },
+    { "key": "watchListId", "value": "1" },
+    { "key": "profileId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"adminuser\",\n  \"email\": \"admin@example.com\",\n  \"passwordHash\": \"123456\",\n  \"role\": \"Admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json && json.token) { pm.collectionVariables.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"passwordHash\": \"123456\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/users", "host": ["{{baseUrl}}"], "path": ["api", "users"] }
+          }
+        },
+        {
+          "name": "Get User By Id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "users", "{{userId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Directors",
+      "item": [
+        {
+          "name": "Create Director (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/directors", "host": ["{{baseUrl}}"], "path": ["api", "directors"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Christopher Nolan\",\n  \"nationality\": \"British-American\",\n  \"birthYear\": 1970,\n  \"bio\": \"Award-winning director\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Directors",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/directors", "host": ["{{baseUrl}}"], "path": ["api", "directors"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "item": [
+        {
+          "name": "Create Movie (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/movies", "host": ["{{baseUrl}}"], "path": ["api", "movies"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Inception\",\n  \"description\": \"Mind-bending thriller\",\n  \"genre\": \"Sci-Fi\",\n  \"releaseYear\": 2010,\n  \"durationMinutes\": 148,\n  \"rating\": 8.8,\n  \"thumbnailUrl\": \"https://example.com/inception.jpg\",\n  \"directorId\": {{directorId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Movies",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/movies", "host": ["{{baseUrl}}"], "path": ["api", "movies"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profiles",
+      "item": [
+        {
+          "name": "Create Profile (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/userprofiles", "host": ["{{baseUrl}}"], "path": ["api", "userprofiles"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bio\": \"Movie enthusiast\",\n  \"avatarUrl\": \"https://example.com/avatar.png\",\n  \"dateOfBirth\": \"1998-06-12T00:00:00Z\",\n  \"country\": \"Egypt\",\n  \"userId\": {{userId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Profiles",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/userprofiles", "host": ["{{baseUrl}}"], "path": ["api", "userprofiles"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "WatchLists",
+      "item": [
+        {
+          "name": "Create WatchList (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/watchlists", "host": ["{{baseUrl}}"], "path": ["api", "watchlists"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isWatched\": false,\n  \"userId\": {{userId}},\n  \"movieId\": {{movieId}}\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All WatchLists",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/watchlists", "host": ["{{baseUrl}}"], "path": ["api", "watchlists"] }
+          }
+        },
+        {
+          "name": "Get WatchLists By User",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{baseUrl}}/api/watchlists/user/{{userId}}", "host": ["{{baseUrl}}"], "path": ["api", "watchlists", "user", "{{userId}}"] }
+          }
+        }
+      ]
+    }
+  ]
+}
