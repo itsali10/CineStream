@@ -1,60 +1,51 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { moviesService } from '../services/moviesService'
 import Sidebar from '../components/Sidebar'
+import type { Movie } from '../types'
 
-const userAvatar = 'https://www.figma.com/api/mcp/asset/c287fd8a-2d65-46f0-adb9-5bb0894f652d'
+function formatDuration(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}` : `${m}m`
+}
 
-const movies = [
-  {
-    id: '1',
-    title: 'Neon Horizon',
-    genre: 'SCI-FI',
-    year: '2024',
-    duration: '2h 15m',
-    rating: '8.9',
-    poster: 'https://www.figma.com/api/mcp/asset/389d637e-82a9-4ee7-ad14-f160f53258d7',
-  },
-  {
-    id: '2',
-    title: 'Midnight Rain',
-    genre: 'THRILLER',
-    year: '2023',
-    duration: '1h 48m',
-    rating: '7.4',
-    poster: 'https://www.figma.com/api/mcp/asset/53f5dd33-614d-463b-997a-87198a0d538d',
-  },
-  {
-    id: '3',
-    title: 'Silent Peak',
-    genre: 'DRAMA',
-    year: '2024',
-    duration: '2h 05m',
-    rating: '9.2',
-    poster: 'https://www.figma.com/api/mcp/asset/281e34e4-bc72-4ed0-ae36-6e1c8f5336c9',
-  },
-  {
-    id: '4',
-    title: 'Circuit Racer',
-    genre: 'ACTION',
-    year: '2024',
-    duration: '1h 55m',
-    rating: '8.1',
-    poster: 'https://www.figma.com/api/mcp/asset/602890f6-4d46-48f6-b6cd-131cb66e4353',
-  },
-]
-
-const genres = ['All', 'Action', 'Drama', 'Sci-Fi', 'Thriller']
+const GENRES = ['All', 'Action', 'Drama', 'Sci-Fi', 'Thriller', 'Comedy', 'Horror', 'Animation']
 
 export default function MoviesPage() {
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [activeGenre, setActiveGenre] = useState('All')
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
+  const { isAdmin, user } = useAuth()
+
+  useEffect(() => {
+    moviesService
+      .getAll()
+      .then(setMovies)
+      .catch(() => setError('Failed to load movies.'))
+      .finally(() => setLoading(false))
+  }, [])
 
   const filtered = movies.filter((m) => {
     const matchGenre = activeGenre === 'All' || m.genre.toLowerCase() === activeGenre.toLowerCase()
     const matchSearch = m.title.toLowerCase().includes(search.toLowerCase())
     return matchGenre && matchSearch
   })
+
+  const handleDelete = async (e: React.MouseEvent, movieId: number) => {
+    e.stopPropagation()
+    if (!confirm('Delete this movie?')) return
+    try {
+      await moviesService.delete(movieId)
+      setMovies((prev) => prev.filter((m) => m.id !== movieId))
+    } catch {
+      alert('Failed to delete movie.')
+    }
+  }
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#0f0f0f' }}>
@@ -64,14 +55,7 @@ export default function MoviesPage() {
         {/* Top navbar */}
         <header
           className="fixed flex items-center justify-between px-10 py-4"
-          style={{
-            left: 260,
-            right: 0,
-            top: 0,
-            zIndex: 40,
-            backgroundColor: 'rgba(19,19,19,0.8)',
-            backdropFilter: 'blur(6px)',
-          }}
+          style={{ left: 260, right: 0, top: 0, zIndex: 40, backgroundColor: 'rgba(19,19,19,0.8)', backdropFilter: 'blur(6px)' }}
         >
           <h1 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 24, color: '#e5e2e1' }}>
             Movies Catalog
@@ -97,11 +81,10 @@ export default function MoviesPage() {
                 }}
               />
             </div>
-            <div
-              className="rounded-xl overflow-hidden"
-              style={{ width: 40, height: 40, border: '2px solid rgba(229,9,20,0.2)', padding: 2 }}
-            >
-              <img src={userAvatar} alt="User" className="w-full h-full object-cover rounded-xl" />
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: '#e50914', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid rgba(229,9,20,0.2)' }}>
+              <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 14, color: '#fff' }}>
+                {user?.username?.[0]?.toUpperCase() ?? 'U'}
+              </span>
             </div>
           </div>
         </header>
@@ -109,19 +92,19 @@ export default function MoviesPage() {
         {/* Content */}
         <main className="pt-24 px-10 pb-16">
           {/* Filter bar */}
-          <div className="flex items-center justify-between mb-16">
-            <div className="flex gap-2">
-              {genres.map((g) => (
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex gap-2 flex-wrap">
+              {GENRES.map((g) => (
                 <button
                   key={g}
                   onClick={() => setActiveGenre(g)}
                   style={{
-                    padding: '8px 24px',
+                    padding: '8px 20px',
                     borderRadius: 12,
                     border: 'none',
                     cursor: 'pointer',
                     fontFamily: "'Be Vietnam Pro', sans-serif",
-                    fontSize: 16,
+                    fontSize: 15,
                     backgroundColor: activeGenre === g ? '#e50914' : '#2a2a2a',
                     color: activeGenre === g ? '#fff7f6' : '#c8c6c5',
                   }}
@@ -130,106 +113,132 @@ export default function MoviesPage() {
                 </button>
               ))}
             </div>
-            <button
-              className="flex items-center gap-2 rounded"
-              style={{
-                padding: '16px 40px',
-                backgroundColor: '#e50914',
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'Be Vietnam Pro', sans-serif",
-                fontWeight: 700,
-                fontSize: 16,
-                color: '#fff7f6',
-              }}
-            >
-              <span>+</span>
-              <span>Add Movie</span>
-            </button>
-          </div>
-
-          {/* Movie grid */}
-          <div className="grid gap-10" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-            {filtered.map((movie) => (
-              <div
-                key={movie.id}
-                className="rounded-lg overflow-hidden cursor-pointer"
-                style={{ backgroundColor: '#201f1f' }}
-                onClick={() => navigate(`/movies/${movie.id}`)}
+            {isAdmin && (
+              <button
+                onClick={() => navigate('/movies/new')}
+                className="flex items-center gap-2 rounded"
+                style={{ padding: '14px 32px', backgroundColor: '#e50914', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff7f6', whiteSpace: 'nowrap' }}
               >
-                <div className="relative" style={{ aspectRatio: '2/3' }}>
-                  <img
-                    src={movie.poster}
-                    alt={movie.title}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Rating badge */}
-                  <div
-                    className="absolute flex items-center gap-1 rounded"
-                    style={{ top: 16, right: 16, padding: '4px 8px', backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
-                  >
-                    <svg width="12" height="11" viewBox="0 0 12 11" fill="#fbbf24">
-                      <path d="M6 0.5L7.5 4H11.5L8.5 6.5L9.5 10.5L6 8L2.5 10.5L3.5 6.5L0.5 4H4.5L6 0.5Z"/>
-                    </svg>
-                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 12, color: '#e5e2e1' }}>
-                      {movie.rating}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-1">
-                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 18, color: '#e5e2e1' }}>
-                      {movie.title}
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: "'Be Vietnam Pro', sans-serif",
-                        fontWeight: 700,
-                        fontSize: 10,
-                        color: '#c8c6c5',
-                        border: '1px solid rgba(175,135,130,0.3)',
-                        borderRadius: 2,
-                        padding: '3px 5px',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {movie.genre}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{movie.year}</span>
-                    <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'rgba(200,198,197,0.3)' }} />
-                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{movie.duration}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                <span>+</span>
+                <span>Add Movie</span>
+              </button>
+            )}
           </div>
 
-          {/* Pagination */}
-          <div className="flex justify-center mt-16">
-            <div className="flex items-center gap-2">
-              {['‹', '1', '2', '3', '›'].map((p, i) => (
-                <button
-                  key={i}
-                  style={{
-                    width: 40, height: 40,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    borderRadius: 4,
-                    border: p === '1' ? 'none' : '1px solid rgba(175,135,130,0.2)',
-                    backgroundColor: p === '1' ? '#e50914' : 'transparent',
-                    fontFamily: "'Be Vietnam Pro', sans-serif",
-                    fontWeight: p === '1' ? 700 : 400,
-                    fontSize: 16,
-                    color: p === '1' ? '#fff7f6' : '#c8c6c5',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {p}
-                </button>
+          {/* Loading */}
+          {loading && (
+            <div className="grid gap-10" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="rounded-lg overflow-hidden" style={{ backgroundColor: '#201f1f' }}>
+                  <div style={{ aspectRatio: '2/3', backgroundColor: '#2a2a2a', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <div className="p-4">
+                    <div style={{ height: 20, backgroundColor: '#2a2a2a', borderRadius: 4, marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                    <div style={{ height: 14, backgroundColor: '#2a2a2a', borderRadius: 4, width: '60%', animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  </div>
+                </div>
               ))}
             </div>
-          </div>
+          )}
+
+          {/* Error */}
+          {!loading && error && (
+            <div style={{ padding: '24px', backgroundColor: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.3)', borderRadius: 8, textAlign: 'center' }}>
+              <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#e50914' }}>{error}</p>
+            </div>
+          )}
+
+          {/* Movie grid */}
+          {!loading && !error && (
+            <>
+              {filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 gap-4">
+                  <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 18, color: '#c8c6c5' }}>
+                    {movies.length === 0 ? 'No movies in the catalog yet.' : 'No movies match your search.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-8" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}>
+                  {filtered.map((movie) => (
+                    <div
+                      key={movie.id}
+                      className="rounded-lg overflow-hidden cursor-pointer"
+                      style={{ backgroundColor: '#201f1f' }}
+                      onClick={() => navigate(`/movies/${movie.id}`)}
+                    >
+                      <div className="relative" style={{ aspectRatio: '2/3' }}>
+                        {movie.thumbnailUrl ? (
+                          <img src={movie.thumbnailUrl} alt={movie.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div
+                            className="w-full h-full flex items-end p-3"
+                            style={{ background: `linear-gradient(135deg, hsl(${(movie.id * 47) % 360}, 40%, 20%) 0%, #131313 100%)` }}
+                          >
+                            <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 13, color: 'rgba(229,226,225,0.6)', lineHeight: 1.3 }}>{movie.title}</span>
+                          </div>
+                        )}
+                        {/* Rating badge */}
+                        <div
+                          className="absolute flex items-center gap-1 rounded"
+                          style={{ top: 10, right: 10, padding: '3px 7px', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 12 11" fill="#fbbf24">
+                            <path d="M6 0.5L7.5 4H11.5L8.5 6.5L9.5 10.5L6 8L2.5 10.5L3.5 6.5L0.5 4H4.5L6 0.5Z"/>
+                          </svg>
+                          <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 11, color: '#e5e2e1' }}>
+                            {movie.rating.toFixed(1)}
+                          </span>
+                        </div>
+                        {/* Admin actions */}
+                        {isAdmin && (
+                          <div className="absolute flex gap-1" style={{ top: 10, left: 10 }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); navigate(`/movies/${movie.id}/edit`) }}
+                              style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(19,19,19,0.7)', border: 'none', borderRadius: 4, cursor: 'pointer', backdropFilter: 'blur(6px)' }}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 15 15" fill="none"><path d="M10.5 2.5L12.5 4.5L5 12H3V10L10.5 2.5Z" stroke="#e5e2e1" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                            </button>
+                            <button
+                              onClick={(e) => handleDelete(e, movie.id)}
+                              style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(229,9,20,0.7)', border: 'none', borderRadius: 4, cursor: 'pointer', backdropFilter: 'blur(6px)' }}
+                            >
+                              <svg width="11" height="13" viewBox="0 0 13 15" fill="none"><path d="M1 3.5H12M4.5 3.5V2H8.5V3.5M5.5 6.5V11.5M7.5 6.5V11.5M2 3.5L2.5 13H10.5L11 3.5" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-3">
+                        <div className="flex items-start justify-between mb-1 gap-2">
+                          <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 14, color: '#e5e2e1', lineHeight: 1.3 }}>
+                            {movie.title}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: "'Be Vietnam Pro', sans-serif",
+                              fontWeight: 700,
+                              fontSize: 9,
+                              color: '#c8c6c5',
+                              border: '1px solid rgba(175,135,130,0.3)',
+                              borderRadius: 2,
+                              padding: '2px 4px',
+                              whiteSpace: 'nowrap',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {movie.genre.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 13, color: '#c8c6c5' }}>{movie.releaseYear}</span>
+                          <div style={{ width: 3, height: 3, borderRadius: '50%', backgroundColor: 'rgba(200,198,197,0.3)' }} />
+                          <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 13, color: '#c8c6c5' }}>{formatDuration(movie.durationMinutes)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </main>
       </div>
     </div>

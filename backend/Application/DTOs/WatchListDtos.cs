@@ -9,6 +9,7 @@ public sealed class WatchListDto
     public bool IsWatched { get; set; }
     public int UserId { get; set; }
     public int MovieId { get; set; }
+    public MovieDto? Movie { get; set; }
 }
 
 public sealed class CreateWatchListDto

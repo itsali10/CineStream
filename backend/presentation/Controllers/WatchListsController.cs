@@ -39,7 +39,6 @@ public sealed class WatchListsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Create([FromBody] CreateWatchListDto dto)
     {
         var created = await _watchListService.CreateAsync(dto);
@@ -47,7 +46,6 @@ public sealed class WatchListsController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateWatchListDto dto)
     {
         var updated = await _watchListService.UpdateAsync(id, dto);
@@ -55,7 +53,6 @@ public sealed class WatchListsController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var deleted = await _watchListService.DeleteAsync(id);

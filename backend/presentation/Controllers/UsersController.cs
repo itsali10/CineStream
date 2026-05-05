@@ -40,7 +40,6 @@ public sealed class UsersController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
     {
         var updated = await _userService.UpdateAsync(id, dto);

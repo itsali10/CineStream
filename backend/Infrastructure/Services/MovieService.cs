@@ -49,7 +49,15 @@ public sealed class MovieService : IMovieService
                 DurationMinutes = m.DurationMinutes,
                 Rating = m.Rating,
                 ThumbnailUrl = m.ThumbnailUrl,
-                DirectorId = m.DirectorId
+                DirectorId = m.DirectorId,
+                Director = m.Director == null ? null : new DirectorDto
+                {
+                    Id = m.Director.Id,
+                    FullName = m.Director.FullName,
+                    Nationality = m.Director.Nationality,
+                    BirthYear = m.Director.BirthYear,
+                    Bio = m.Director.Bio
+                }
             })
             .FirstOrDefaultAsync(cancellationToken);
     }

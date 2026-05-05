@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { authService } from '../services/authService'
+import { useAuth } from '../context/AuthContext'
 
 const bgHero = 'https://www.figma.com/api/mcp/asset/7f0ec4ff-bf03-48ca-a1fa-b6aa15259d54'
 const iconEmail = 'https://www.figma.com/api/mcp/asset/552a5879-8922-46be-9397-72b87411a794'
@@ -14,11 +16,53 @@ export default function LoginPage() {
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { login } = useAuth()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/movies')
+    setLoading(true)
+    setError('')
+    try {
+      if (activeTab === 'login') {
+        const res = await authService.login({ email, passwordHash: password })
+        login(res.token, {
+          id: res.userId ?? 0,
+          username: res.username ?? '',
+          email: res.email ?? email,
+          role: res.role ?? 'User',
+        })
+      } else {
+        const res = await authService.register({ username, email, passwordHash: password })
+        login(res.token, {
+          id: res.userId ?? 0,
+          username: res.username ?? username,
+          email: res.email ?? email,
+          role: res.role ?? 'User',
+        })
+      }
+      navigate('/')
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      setError(message || 'Invalid credentials. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '18px 16px 18px 48px',
+    backgroundColor: '#0e0e0e',
+    border: '1px solid rgba(94,63,59,0.3)',
+    borderRadius: 4,
+    fontFamily: "'Be Vietnam Pro', sans-serif",
+    fontSize: 16,
+    color: '#e5e2e1',
+    outline: 'none',
   }
 
   return (
@@ -49,7 +93,7 @@ export default function LoginPage() {
 
         {/* Auth card */}
         <div
-          className="flex flex-col gap-10 rounded-lg"
+          className="flex flex-col gap-8 rounded-lg"
           style={{
             padding: '48px 40px 40px',
             backgroundColor: 'rgba(26,26,26,0.8)',
@@ -74,7 +118,7 @@ export default function LoginPage() {
               {(['login', 'register'] as const).map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab)}
+                  onClick={() => { setActiveTab(tab); setError('') }}
                   className="pb-4"
                   style={{
                     border: 'none',
@@ -97,7 +141,32 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            {/* Username (register only) */}
+            {activeTab === 'register' && (
+              <div className="flex flex-col gap-1">
+                <label style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#c8c6c5', letterSpacing: '0.7px' }}>
+                  Username
+                </label>
+                <div className="relative">
+                  <div className="absolute" style={{ left: 16, top: '50%', transform: 'translateY(-50%)' }}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <circle cx="10" cy="7" r="4" stroke="#6b7280" strokeWidth="1.5"/>
+                      <path d="M2 18C2 14.134 5.686 11 10 11C14.314 11 18 14.134 18 18" stroke="#6b7280" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="your_username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div className="flex flex-col gap-1">
               <label style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#c8c6c5', letterSpacing: '0.7px' }}>
@@ -112,17 +181,8 @@ export default function LoginPage() {
                   placeholder="name@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '18px 16px 18px 48px',
-                    backgroundColor: '#0e0e0e',
-                    border: '1px solid rgba(94,63,59,0.3)',
-                    borderRadius: 4,
-                    fontFamily: "'Be Vietnam Pro', sans-serif",
-                    fontSize: 16,
-                    color: '#e5e2e1',
-                    outline: 'none',
-                  }}
+                  required
+                  style={inputStyle}
                 />
               </div>
             </div>
@@ -133,9 +193,11 @@ export default function LoginPage() {
                 <label style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#c8c6c5', letterSpacing: '0.7px' }}>
                   Password
                 </label>
-                <button type="button" style={{ background: 'none', border: 'none', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 12, color: '#e50914', cursor: 'pointer' }}>
-                  Forgot?
-                </button>
+                {activeTab === 'login' && (
+                  <button type="button" style={{ background: 'none', border: 'none', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 12, color: '#e50914', cursor: 'pointer' }}>
+                    Forgot?
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <div className="absolute" style={{ left: 16, top: '50%', transform: 'translateY(-50%)' }}>
@@ -146,41 +208,40 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '18px 16px 18px 48px',
-                    backgroundColor: '#0e0e0e',
-                    border: '1px solid rgba(94,63,59,0.3)',
-                    borderRadius: 4,
-                    fontFamily: "'Be Vietnam Pro', sans-serif",
-                    fontSize: 16,
-                    color: '#e5e2e1',
-                    outline: 'none',
-                  }}
+                  required
+                  style={inputStyle}
                 />
               </div>
             </div>
 
+            {/* Error message */}
+            {error && (
+              <div style={{ padding: '12px 16px', backgroundColor: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.3)', borderRadius: 4 }}>
+                <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 14, color: '#e50914' }}>{error}</p>
+              </div>
+            )}
+
             {/* Submit button */}
             <button
               type="submit"
+              disabled={loading}
               className="w-full flex items-center justify-center gap-2 rounded"
-              style={{ height: 63, backgroundColor: '#e50914', border: 'none', cursor: 'pointer' }}
+              style={{ height: 63, backgroundColor: loading ? '#a00610' : '#e50914', border: 'none', cursor: loading ? 'not-allowed' : 'pointer' }}
             >
               <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 24, color: '#fff7f6' }}>
-                {activeTab === 'login' ? 'Login' : 'Register'}
+                {loading ? 'Please wait…' : activeTab === 'login' ? 'Login' : 'Register'}
               </span>
-              <img src={iconArrow} alt="" style={{ width: 16, height: 16 }} />
+              {!loading && <img src={iconArrow} alt="" style={{ width: 16, height: 16 }} />}
             </button>
 
             {/* Divider */}
-            <div className="relative flex items-center justify-center py-4">
+            <div className="relative flex items-center justify-center py-2">
               <div className="absolute inset-0 flex items-center">
                 <div style={{ flex: 1, height: 1, backgroundColor: 'rgba(94,63,59,0.2)' }} />
               </div>
               <span
                 className="relative px-4"
-                style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 12, color: '#c8c6c5', backgroundColor: '#201f1f', textTransform: 'uppercase' }}
+                style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 12, color: '#c8c6c5', backgroundColor: 'rgba(26,26,26,0.8)', textTransform: 'uppercase' }}
               >
                 OR CONTINUE WITH
               </span>
@@ -208,7 +269,7 @@ export default function LoginPage() {
           </form>
 
           {/* Legal */}
-          <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5', textAlign: 'center', lineHeight: '24px' }}>
+          <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 14, color: '#c8c6c5', textAlign: 'center', lineHeight: '22px' }}>
             By signing in, you agree to our{' '}
             <span style={{ color: '#e5e2e1', cursor: 'pointer' }}>Terms of Service</span>
             {' '}and{' '}

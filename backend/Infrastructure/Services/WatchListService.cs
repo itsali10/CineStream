@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MovieStreamingAPI.Application.DTOs;
 using MovieStreamingAPI.Application.Interfaces;
 using MovieStreamingAPI.Infrastructure.Persistence;
@@ -26,7 +26,19 @@ public sealed class WatchListService : IWatchListService
                 AddedAt = w.AddedAt,
                 IsWatched = w.IsWatched,
                 UserId = w.UserId,
-                MovieId = w.MovieId
+                MovieId = w.MovieId,
+                Movie = w.Movie == null ? null : new MovieDto
+                {
+                    Id = w.Movie.Id,
+                    Title = w.Movie.Title,
+                    Genre = w.Movie.Genre,
+                    ReleaseYear = w.Movie.ReleaseYear,
+                    DurationMinutes = w.Movie.DurationMinutes,
+                    Rating = w.Movie.Rating,
+                    ThumbnailUrl = w.Movie.ThumbnailUrl,
+                    DirectorId = w.Movie.DirectorId,
+                    Description = w.Movie.Description
+                }
             })
             .ToListAsync(cancellationToken);
     }
@@ -43,7 +55,19 @@ public sealed class WatchListService : IWatchListService
                 AddedAt = w.AddedAt,
                 IsWatched = w.IsWatched,
                 UserId = w.UserId,
-                MovieId = w.MovieId
+                MovieId = w.MovieId,
+                Movie = w.Movie == null ? null : new MovieDto
+                {
+                    Id = w.Movie.Id,
+                    Title = w.Movie.Title,
+                    Genre = w.Movie.Genre,
+                    ReleaseYear = w.Movie.ReleaseYear,
+                    DurationMinutes = w.Movie.DurationMinutes,
+                    Rating = w.Movie.Rating,
+                    ThumbnailUrl = w.Movie.ThumbnailUrl,
+                    DirectorId = w.Movie.DirectorId,
+                    Description = w.Movie.Description
+                }
             })
             .ToListAsync(cancellationToken);
     }
@@ -59,7 +83,19 @@ public sealed class WatchListService : IWatchListService
                 AddedAt = w.AddedAt,
                 IsWatched = w.IsWatched,
                 UserId = w.UserId,
-                MovieId = w.MovieId
+                MovieId = w.MovieId,
+                Movie = w.Movie == null ? null : new MovieDto
+                {
+                    Id = w.Movie.Id,
+                    Title = w.Movie.Title,
+                    Genre = w.Movie.Genre,
+                    ReleaseYear = w.Movie.ReleaseYear,
+                    DurationMinutes = w.Movie.DurationMinutes,
+                    Rating = w.Movie.Rating,
+                    ThumbnailUrl = w.Movie.ThumbnailUrl,
+                    DirectorId = w.Movie.DirectorId,
+                    Description = w.Movie.Description
+                }
             })
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -77,7 +113,8 @@ public sealed class WatchListService : IWatchListService
         _context.WatchLists.Add(entity);
         await _context.SaveChangesAsync(cancellationToken);
 
-        return MapToDto(entity);
+        // Re-fetch with movie so the response includes it
+        return await GetByIdAsync(entity.Id, cancellationToken) ?? MapToDto(entity);
     }
 
     public async Task<WatchListDto?> UpdateAsync(int id, UpdateWatchListDto dto, CancellationToken cancellationToken = default)
@@ -89,9 +126,9 @@ public sealed class WatchListService : IWatchListService
         }
 
         entity.IsWatched = dto.IsWatched;
-
         await _context.SaveChangesAsync(cancellationToken);
-        return MapToDto(entity);
+
+        return await GetByIdAsync(id, cancellationToken);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)

@@ -13,6 +13,7 @@ public sealed class MovieDto
     public double Rating { get; set; }
     public string? ThumbnailUrl { get; set; }
     public int DirectorId { get; set; }
+    public DirectorDto? Director { get; set; }
 }
 
 public sealed class CreateMovieDto

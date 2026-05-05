@@ -1,30 +1,81 @@
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { moviesService } from '../services/moviesService'
+import { watchlistService } from '../services/watchlistService'
 import Sidebar from '../components/Sidebar'
+import type { Movie } from '../types'
 
-const heroBg = 'https://www.figma.com/api/mcp/asset/57de108e-15fc-4bac-b55f-9ea1d808c3da'
-const poster = 'https://www.figma.com/api/mcp/asset/52845ce1-e1a3-4869-a54a-aa1599e65b4d'
-const still1 = 'https://www.figma.com/api/mcp/asset/a9d10cdf-ab62-4b3c-8885-59edad36c16e'
-const still2 = 'https://www.figma.com/api/mcp/asset/c8b012e1-6443-4d14-9c43-aa4c7b0be433'
-const castMatthew = 'https://www.figma.com/api/mcp/asset/1bf7e521-4c5e-46fe-afc7-00cf120a040f'
-const castAnne = 'https://www.figma.com/api/mcp/asset/36c0d2a5-5c87-4581-a516-c2ddd08f7091'
-const castJessica = 'https://www.figma.com/api/mcp/asset/935db71c-4e58-49fa-8306-5e53425981d9'
-const similarMartian = 'https://www.figma.com/api/mcp/asset/e057f890-2ef2-410a-9cce-1597568aa72b'
-const similarInception = 'https://www.figma.com/api/mcp/asset/b12c49d6-1150-4ffa-aab5-08e8b791d988'
-const userAvatar = 'https://www.figma.com/api/mcp/asset/3d2517e7-723f-4eae-8487-6159a7fb5040'
-
-const cast = [
-  { name: 'Matthew McConaughey', role: 'Joseph Cooper', img: castMatthew },
-  { name: 'Anne Hathaway', role: 'Dr. Amelia Brand', img: castAnne },
-  { name: 'Jessica Chastain', role: 'Murphy Cooper', img: castJessica },
-]
-
-const similar = [
-  { title: 'The Martian', meta: '2015 • Sci-Fi', img: similarMartian },
-  { title: 'Inception', meta: '2010 • Action / Sci-Fi', img: similarInception },
-]
+function formatDuration(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? `${h}h ${m > 0 ? `${m}m` : ''}` : `${m}m`
+}
 
 export default function MovieDetailsPage() {
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { isAdmin, user } = useAuth()
+  const [movie, setMovie] = useState<Movie | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [watchlistMsg, setWatchlistMsg] = useState('')
+
+  useEffect(() => {
+    if (!id) return
+    moviesService
+      .getById(parseInt(id))
+      .then(setMovie)
+      .catch(() => setError('Movie not found.'))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  const handleDelete = async () => {
+    if (!movie || !confirm(`Delete "${movie.title}"?`)) return
+    try {
+      await moviesService.delete(movie.id)
+      navigate('/movies')
+    } catch {
+      alert('Failed to delete movie.')
+    }
+  }
+
+  const handleAddToWatchlist = async () => {
+    if (!movie || !user) return
+    try {
+      await watchlistService.add(user.id, movie.id)
+      setWatchlistMsg('Added to watchlist!')
+      setTimeout(() => setWatchlistMsg(''), 3000)
+    } catch {
+      setWatchlistMsg('Already in watchlist or error occurred.')
+      setTimeout(() => setWatchlistMsg(''), 3000)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex" style={{ backgroundColor: '#131313' }}>
+        <Sidebar activePath="/movies" />
+        <div className="flex-1 flex items-center justify-center" style={{ marginLeft: 260 }}>
+          <div style={{ width: 48, height: 48, border: '3px solid rgba(229,9,20,0.3)', borderTopColor: '#e50914', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !movie) {
+    return (
+      <div className="min-h-screen flex" style={{ backgroundColor: '#131313' }}>
+        <Sidebar activePath="/movies" />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4" style={{ marginLeft: 260 }}>
+          <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 20, color: '#e50914' }}>{error || 'Movie not found.'}</p>
+          <button onClick={() => navigate('/movies')} style={{ padding: '12px 32px', backgroundColor: '#e50914', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff' }}>
+            Back to Movies
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#131313' }}>
@@ -39,163 +90,136 @@ export default function MovieDetailsPage() {
           <div className="flex items-center gap-6">
             <button
               onClick={() => navigate('/movies')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1', display: 'flex', alignItems: 'center', gap: 8 }}
             >
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+                <path d="M11 3L5 9L11 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
               Movies
             </button>
-            <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 16, color: '#c8c6c5', cursor: 'pointer' }}>Series</span>
-            <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 500, fontSize: 16, color: '#c8c6c5', cursor: 'pointer' }}>Animation</span>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: '#6b7280' }} viewBox="0 0 18 18" fill="none">
-                <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M13 13L17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <input
-                type="text"
-                placeholder="Search movies..."
-                style={{ paddingLeft: 40, paddingRight: 16, paddingTop: 10, paddingBottom: 10, width: 256, backgroundColor: '#1c1b1b', border: '1px solid rgba(94,63,59,0.2)', borderRadius: 12, fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#6b7280', outline: 'none' }}
-              />
-            </div>
-            <div className="rounded-xl overflow-hidden" style={{ width: 32, height: 32, border: '1px solid rgba(94,63,59,0.3)', padding: 1 }}>
-              <img src={userAvatar} alt="User" className="w-full h-full object-cover rounded-xl" />
-            </div>
+          <div className="flex items-center gap-4">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => navigate(`/movies/${movie.id}/edit`)}
+                  style={{ padding: '10px 24px', backgroundColor: '#2a2a2a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#e5e2e1', display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 15 15" fill="none"><path d="M10.5 2.5L12.5 4.5L5 12H3V10L10.5 2.5Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>
+                  Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  style={{ padding: '10px 24px', backgroundColor: 'rgba(229,9,20,0.15)', border: '1px solid rgba(229,9,20,0.3)', borderRadius: 6, cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#e50914', display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                  <svg width="11" height="13" viewBox="0 0 13 15" fill="none"><path d="M1 3.5H12M4.5 3.5V2H8.5V3.5M5.5 6.5V11.5M7.5 6.5V11.5M2 3.5L2.5 13H10.5L11 3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  Delete
+                </button>
+              </>
+            )}
           </div>
         </header>
 
         {/* Hero */}
-        <div className="relative overflow-hidden" style={{ height: 870, marginTop: 67 }}>
-          <img src={heroBg} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.25)', transformOrigin: 'center' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #131313, rgba(19,19,19,0.4) 50%, rgba(19,19,19,0))' }} />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #131313, rgba(19,19,19,0) 50%)' }} />
+        <div className="relative overflow-hidden" style={{ minHeight: 500, marginTop: 67 }}>
+          {movie.thumbnailUrl ? (
+            <img src={movie.thumbnailUrl} alt="" className="absolute inset-0 w-full h-full object-cover" style={{ transform: 'scale(1.1)', transformOrigin: 'center' }} />
+          ) : (
+            <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, hsl(${(movie.id * 47) % 360}, 40%, 15%) 0%, #131313 100%)` }} />
+          )}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #131313 20%, rgba(19,19,19,0.5) 60%, rgba(19,19,19,0.2))' }} />
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #131313 30%, rgba(19,19,19,0))' }} />
 
-          <div className="absolute bottom-16 left-10 flex gap-10">
-            {/* Poster */}
-            <div className="rounded-lg overflow-hidden flex-shrink-0" style={{ width: 254, aspectRatio: '2/3', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 30px rgba(0,0,0,0.8)' }}>
-              <img src={poster} alt="Interstellar" className="w-full h-full object-cover" />
-            </div>
-
+          <div className="absolute bottom-10 left-10 flex gap-10">
             {/* Metadata */}
             <div className="flex flex-col gap-4 justify-end max-w-2xl">
-              <div className="flex items-center gap-4">
-                <span style={{ padding: '4px 8px', backgroundColor: '#e50914', borderRadius: 2, fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#fff7f6' }}>NEW</span>
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-1">
-                  <svg width="12" height="11" viewBox="0 0 12 11" fill="#fbbf24"><path d="M6 0.5L7.5 4H11.5L8.5 6.5L9.5 10.5L6 8L2.5 10.5L3.5 6.5L0.5 4H4.5L6 0.5Z"/></svg>
-                  <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>8.6</span>
+                  <svg width="14" height="13" viewBox="0 0 12 11" fill="#fbbf24"><path d="M6 0.5L7.5 4H11.5L8.5 6.5L9.5 10.5L6 8L2.5 10.5L3.5 6.5L0.5 4H4.5L6 0.5Z"/></svg>
+                  <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>{movie.rating.toFixed(1)}</span>
                 </div>
-                <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>2014</span>
-                <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>2h 49m</span>
+                <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{movie.releaseYear}</span>
+                <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{formatDuration(movie.durationMinutes)}</span>
+                <span style={{ padding: '4px 12px', border: '1px solid rgba(255,180,170,0.3)', borderRadius: 12, fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 14, color: '#ffb4aa' }}>{movie.genre}</span>
               </div>
 
-              <h1 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 900, fontSize: 48, color: '#e5e2e1', letterSpacing: '-2.4px', textTransform: 'uppercase', lineHeight: '52.8px' }}>
-                INTERSTELLAR
+              <h1 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 900, fontSize: 48, color: '#e5e2e1', letterSpacing: '-2px', textTransform: 'uppercase', lineHeight: 1.1 }}>
+                {movie.title}
               </h1>
 
-              <div className="flex gap-4">
-                {['Sci-Fi', 'Adventure', 'Drama'].map((g) => (
-                  <span key={g} style={{ padding: '5px 17px', border: '1px solid rgba(255,180,170,0.3)', borderRadius: 12, fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#ffb4aa' }}>{g}</span>
-                ))}
-              </div>
+              {movie.description && (
+                <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 17, color: '#c8c6c5', lineHeight: 1.6, maxWidth: 600 }}>
+                  {movie.description}
+                </p>
+              )}
 
-              <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 18, color: '#c8c6c5', lineHeight: '29.25px', maxWidth: 672 }}>
-                When Earth becomes uninhabitable, a team of ex-pilots and scientists must travel through a wormhole to find a new home for humanity. A visually stunning journey across space and time.
-              </p>
-
-              <div className="flex items-center gap-4 mt-6">
-                <button className="flex items-center gap-2 rounded" style={{ padding: '16px 64px', backgroundColor: '#e50914', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff7f6' }}>
-                  <svg width="11" height="14" viewBox="0 0 11 14" fill="currentColor"><path d="M1 1L10 7L1 13V1Z"/></svg>
-                  Play Now
-                </button>
-                <button className="flex items-center gap-2 rounded" style={{ padding: '17px 25px', backgroundColor: 'rgba(71,71,70,0.3)', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>
+              <div className="flex items-center gap-4 mt-2 flex-wrap">
+                <button
+                  onClick={handleAddToWatchlist}
+                  className="flex items-center gap-2 rounded"
+                  style={{ padding: '14px 40px', backgroundColor: '#e50914', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#fff7f6' }}
+                >
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1V13M1 7H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   Add to Watchlist
                 </button>
+                {watchlistMsg && (
+                  <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 14, color: watchlistMsg.includes('Added') ? '#4ade80' : '#e50914' }}>
+                    {watchlistMsg}
+                  </span>
+                )}
               </div>
             </div>
           </div>
         </div>
 
         {/* Details section */}
-        <div className="px-10 py-16" style={{ backgroundColor: '#131313' }}>
-          <div className="grid gap-16" style={{ gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 380px' }}>
-            {/* Left column */}
-            <div className="col-span-5 flex flex-col gap-10">
+        <div className="px-10 py-12" style={{ backgroundColor: '#131313' }}>
+          <div className="grid gap-10" style={{ gridTemplateColumns: '1fr 1fr 1fr 320px' }}>
+            {/* Left */}
+            <div className="col-span-3 flex flex-col gap-8">
               {/* Synopsis */}
-              <div>
-                <h2 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 24, color: '#e5e2e1', paddingBottom: 16, borderBottom: '1px solid rgba(94,63,59,0.2)', marginBottom: 16 }}>
-                  Synopsis
-                </h2>
-                <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#b7b5b4', lineHeight: '26px' }}>
-                  In the mid-21st century, crop blights and dust storms threaten humanity's survival. Joseph Cooper, a widowed engineer and former NASA pilot, runs a farm with his father-in-law, son, and daughter Murphy. After Murphy discovers a 'ghost' in her room—which Cooper realizes is a gravitational anomaly—they find a secret NASA facility led by Professor John Brand.
-                </p>
-              </div>
+              {movie.description && (
+                <div>
+                  <h2 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 22, color: '#e5e2e1', paddingBottom: 12, borderBottom: '1px solid rgba(94,63,59,0.2)', marginBottom: 12 }}>
+                    Synopsis
+                  </h2>
+                  <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#b7b5b4', lineHeight: 1.7 }}>
+                    {movie.description}
+                  </p>
+                </div>
+              )}
 
               {/* Stats */}
-              <div className="grid grid-cols-4 gap-6">
+              <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: 'DIRECTOR', value: 'Christopher Nolan' },
-                  { label: 'RELEASE', value: 'Nov 7, 2014' },
-                  { label: 'BOX OFFICE', value: '$701.7M' },
-                  { label: 'RATING', value: 'PG-13' },
+                  { label: 'Director', value: movie.director?.fullName ?? `Director #${movie.directorId}` },
+                  { label: 'Release Year', value: movie.releaseYear.toString() },
+                  { label: 'Duration', value: formatDuration(movie.durationMinutes) },
                 ].map((s) => (
-                  <div key={s.label} style={{ padding: 25, backgroundColor: '#201f1f', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8 }}>
-                    <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5', textTransform: 'uppercase', marginBottom: 4 }}>{s.label}</p>
+                  <div key={s.label} style={{ padding: 20, backgroundColor: '#201f1f', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                    <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 13, color: '#c8c6c5', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 6 }}>{s.label}</p>
                     <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>{s.value}</p>
                   </div>
                 ))}
               </div>
-
-              {/* Stills */}
-              <div>
-                <h2 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 24, color: '#e5e2e1', marginBottom: 24 }}>Stills from Movie</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  {[still1, still2].map((src, i) => (
-                    <div key={i} className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
-                      <img src={src} alt="" className="w-full object-cover" style={{ height: 404 }} />
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
 
-            {/* Right column */}
-            <div className="col-span-4 flex flex-col gap-10" style={{ gridColumn: '6 / -1' }}>
-              {/* Top cast */}
-              <div style={{ padding: 40, backgroundColor: 'rgba(26,26,26,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8, backdropFilter: 'blur(6px)' }}>
-                <h3 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 24, color: '#e5e2e1', marginBottom: 24 }}>Top Cast</h3>
-                <div className="flex flex-col gap-4">
-                  {cast.map((c) => (
-                    <div key={c.name} className="flex items-center gap-4 p-4 rounded">
-                      <div className="rounded-xl overflow-hidden flex-shrink-0" style={{ width: 48, height: 48, backgroundColor: '#201f1f' }}>
-                        <img src={c.img} alt={c.name} className="w-full h-full object-cover" />
-                      </div>
-                      <div>
-                        <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>{c.name}</p>
-                        <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{c.role}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button style={{ width: '100%', padding: '8px 0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#ffb4aa', textAlign: 'center', marginTop: 16 }}>
-                  View All Cast
-                </button>
-              </div>
-
-              {/* Similar movies */}
-              <div>
-                <h3 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 24, color: '#e5e2e1', marginBottom: 16, padding: '0 16px' }}>Similar Movies</h3>
-                <div className="flex flex-col gap-4">
-                  {similar.map((s) => (
-                    <div key={s.title} className="relative rounded-lg overflow-hidden cursor-pointer" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <img src={s.img} alt={s.title} className="w-full object-cover" style={{ height: 390, filter: 'saturate(0)' }} />
-                      <div className="absolute inset-0 flex flex-col justify-end p-6" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0))' }}>
-                        <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 700, fontSize: 16, color: '#e5e2e1' }}>{s.title}</p>
-                        <p style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 16, color: '#c8c6c5' }}>{s.meta}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            {/* Right sidebar */}
+            <div style={{ padding: 32, backgroundColor: 'rgba(26,26,26,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8 }}>
+              <h3 style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 20, color: '#e5e2e1', marginBottom: 20 }}>Details</h3>
+              <div className="flex flex-col gap-4">
+                {[
+                  { label: 'Genre', value: movie.genre },
+                  { label: 'Rating', value: `${movie.rating.toFixed(1)} / 10` },
+                  { label: 'Year', value: movie.releaseYear.toString() },
+                  { label: 'Duration', value: formatDuration(movie.durationMinutes) },
+                  { label: 'Director', value: movie.director?.fullName ?? `#${movie.directorId}` },
+                ].map((d) => (
+                  <div key={d.label} className="flex justify-between items-baseline" style={{ paddingBottom: 12, borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontSize: 13, color: '#c8c6c5' }}>{d.label}</span>
+                    <span style={{ fontFamily: "'Be Vietnam Pro', sans-serif", fontWeight: 600, fontSize: 14, color: '#e5e2e1' }}>{d.value}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

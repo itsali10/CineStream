@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 const navItems = [
   {
     label: 'Home',
-    path: '/movies',
+    path: '/',
     icon: (
       <svg width="16" height="18" viewBox="0 0 16 18" fill="none">
         <path d="M1 6.5L8 1L15 6.5V16C15 16.55 14.55 17 14 17H10V12H6V17H2C1.45 17 1 16.55 1 16V6.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
